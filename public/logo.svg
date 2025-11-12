@@ -1,0 +1,160 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feFlood floodColor="#00f5d4" floodOpacity="0.6" result="colorFlood"/>
+      <feComposite in="colorFlood" in2="coloredBlur" operator="in" result="colorBlur"/>
+      <feMerge>
+        <feMergeNode in="colorBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="vGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e6f1f5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#cfd8dc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a6b5bd;stop-opacity:1" />
+    </linearGradient>
+    <g id="arm">
+      <!-- Main arm structure -->
+      <line x1="0" y1="0" x2="0" y2="90" stroke="#00f5d4" strokeWidth="3" opacity="0.9" filter="url(#glow)"/>
+      <!-- Terminal circle -->
+      <circle cx="0" cy="95" r="8" fill="none" stroke="#00f5d4" strokeWidth="2.5" opacity="0.9" filter="url(#innerGlow)"/>
+      <circle cx="0" cy="95" r="5" fill="#00f5d4" opacity="0.4"/>
+      <!-- Branch line 1 -->
+      <line x1="0" y1="30" x2="-25" y2="50" stroke="#00f5d4" strokeWidth="2.5" opacity="0.8"/>
+      <!-- Branch circle 1 -->
+      <circle cx="-25" cy="50" r="6" fill="none" stroke="#00f5d4" strokeWidth="2" opacity="0.8"/>
+      <!-- Branch line 2 -->
+      <line x1="0" y1="30" x2="25" y2="50" stroke="#00f5d4" strokeWidth="2.5" opacity="0.8"/>
+      <!-- Branch circle 2 -->
+      <circle cx="25" cy="50" r="6" fill="none" stroke="#00f5d4" strokeWidth="2" opacity="0.8"/>
+      <!-- Hexagon node left -->
+      <g transform="translate(-40, 65)">
+        <polygon points="0,-6 5.2,-3 5.2,3 0,6 -5.2,3 -5.2,-3" fill="none" stroke="#00f5d4" strokeWidth="1.5" opacity="0.7"/>
+      </g>
+      <!-- Hexagon node right -->
+      <g transform="translate(40, 65)">
+        <polygon points="0,-6 5.2,-3 5.2,3 0,6 -5.2,3 -5.2,-3" fill="none" stroke="#00f5d4" strokeWidth="1.5" opacity="0.7"/>
+      </g>
+      <!-- Snowflake pattern left -->
+      <g transform="translate(-35, 40)" opacity="0.6">
+        <line x1="0" y1="-8" x2="0" y2="8" stroke="#00f5d4" strokeWidth="1.5"/>
+        <line x1="-7" y1="-4" x2="7" y2="4" stroke="#00f5d4" strokeWidth="1.5"/>
+        <line x1="-7" y1="4" x2="7" y2="-4" stroke="#00f5d4" strokeWidth="1.5"/>
+      </g>
+      <!-- Snowflake pattern right -->
+      <g transform="translate(35, 40)" opacity="0.6">
+        <line x1="0" y1="-8" x2="0" y2="8" stroke="#00f5d4" strokeWidth="1.5"/>
+        <line x1="-7" y1="-4" x2="7" y2="4" stroke="#00f5d4" strokeWidth="1.5"/>
+        <line x1="-7" y1="4" x2="7" y2="-4" stroke="#00f5d4" strokeWidth="1.5"/>
+      </g>
+    </g>
+  </defs>
+
+  <!-- Central hexagon frame (outer) -->
+  <g id="centerFrame">
+    <polygon points="256,120 344,155 344,225 256,260 168,225 168,155" fill="none" stroke="#00f5d4" strokeWidth="4" opacity="0.9" filter="url(#glow)"/>
+    <polygon points="256,135 337,167 337,215 256,247 175,215 175,167" fill="none" stroke="#00d9ff" strokeWidth="2" opacity="0.6"/>
+  </g>
+
+  <!-- Top hexagon (decorative) -->
+  <g id="topHex" transform="translate(256, 90)">
+    <polygon points="0,-15 13,-7.5 13,7.5 0,15 -13,7.5 -13,-7.5" fill="none" stroke="#00f5d4" strokeWidth="3" opacity="0.85" filter="url(#glow)"/>
+    <!-- Cross pattern inside -->
+    <line x1="-8" y1="0" x2="8" y2="0" stroke="#00f5d4" strokeWidth="1.5" opacity="0.6"/>
+    <line x1="0" y1="-8" x2="0" y2="8" stroke="#00f5d4" strokeWidth="1.5" opacity="0.6"/>
+    <line x1="-5.7" y1="-5.7" x2="5.7" y2="5.7" stroke="#00f5d4" strokeWidth="1.5" opacity="0.5"/>
+    <line x1="-5.7" y1="5.7" x2="5.7" y2="-5.7" stroke="#00f5d4" strokeWidth="1.5" opacity="0.5"/>
+  </g>
+
+  <!-- Central V letter with gradient -->
+  <g id="centerV">
+    <polygon points="210,170 230,240 245,240 270,170 255,170 245,210 235,210 225,170" fill="url(#vGradient)" opacity="0.95"/>
+    <!-- V outline left -->
+    <polyline points="210,170 230,240 245,240" fill="none" stroke="#cfd8dc" strokeWidth="3" opacity="0.8" filter="url(#innerGlow)"/>
+    <!-- V outline right -->
+    <polyline points="270,170 250,240 245,240" fill="none" stroke="#cfd8dc" strokeWidth="3" opacity="0.8" filter="url(#innerGlow)"/>
+  </g>
+
+  <!-- Bottom hexagon (decorative) -->
+  <g id="bottomHex" transform="translate(256, 382)">
+    <polygon points="0,-15 13,-7.5 13,7.5 0,15 -13,7.5 -13,-7.5" fill="none" stroke="#00f5d4" strokeWidth="3" opacity="0.85" filter="url(#glow)"/>
+    <!-- Snowflake pattern -->
+    <line x1="0" y1="-10" x2="0" y2="10" stroke="#00f5d4" strokeWidth="1.5" opacity="0.6"/>
+    <line x1="-8.7" y1="-5" x2="8.7" y2="5" stroke="#00f5d4" strokeWidth="1.5" opacity="0.6"/>
+    <line x1="-8.7" y1="5" x2="8.7" y2="-5" stroke="#00f5d4" strokeWidth="1.5" opacity="0.6"/>
+  </g>
+
+  <!-- Six arms using rotation -->
+  <g id="arms">
+    <!-- Top arm -->
+    <g transform="translate(256, 100)">
+      <use href="#arm"/>
+    </g>
+    <!-- Upper right arm -->
+    <g transform="translate(256, 256) rotate(60) translate(0, -156)">
+      <use href="#arm"/>
+    </g>
+    <!-- Lower right arm -->
+    <g transform="translate(256, 256) rotate(120) translate(0, -156)">
+      <use href="#arm"/>
+    </g>
+    <!-- Bottom arm -->
+    <g transform="translate(256, 256) rotate(180) translate(0, -156)">
+      <use href="#arm"/>
+    </g>
+    <!-- Lower left arm -->
+    <g transform="translate(256, 256) rotate(240) translate(0, -156)">
+      <use href="#arm"/>
+    </g>
+    <!-- Upper left arm -->
+    <g transform="translate(256, 256) rotate(300) translate(0, -156)">
+      <use href="#arm"/>
+    </g>
+  </g>
+
+  <!-- Connecting lines from center to arms -->
+  <g id="connections" opacity="0.5">
+    <line x1="256" y1="156" x2="256" y2="120" stroke="#00f5d4" strokeWidth="2"/>
+    <line x1="256" y1="156" x2="312" y2="108" stroke="#00f5d4" strokeWidth="2"/>
+    <line x1="256" y1="156" x2="312" y2="204" stroke="#00f5d4" strokeWidth="2"/>
+    <line x1="256" y1="356" x2="256" y2="392" stroke="#00f5d4" strokeWidth="2"/>
+    <line x1="256" y1="356" x2="200" y2="404" stroke="#00f5d4" strokeWidth="2"/>
+    <line x1="256" y1="356" x2="200" y2="308" stroke="#00f5d4" strokeWidth="2"/>
+  </g>
+
+  <!-- Left hexagon nodes -->
+  <g id="leftHexes">
+    <g transform="translate(100, 200)">
+      <polygon points="0,-12 10.4,-6 10.4,6 0,12 -10.4,6 -10.4,-6" fill="none" stroke="#00f5d4" strokeWidth="2.5" opacity="0.8" filter="url(#glow)"/>
+      <!-- Inner snowflake -->
+      <line x1="0" y1="-8" x2="0" y2="8" stroke="#00f5d4" strokeWidth="1" opacity="0.5"/>
+      <line x1="-6.9" y1="-4" x2="6.9" y2="4" stroke="#00f5d4" strokeWidth="1" opacity="0.5"/>
+      <line x1="-6.9" y1="4" x2="6.9" y2="-4" stroke="#00f5d4" strokeWidth="1" opacity="0.5"/>
+    </g>
+    <g transform="translate(100, 312)">
+      <polygon points="0,-12 10.4,-6 10.4,6 0,12 -10.4,6 -10.4,-6" fill="none" stroke="#00f5d4" strokeWidth="2.5" opacity="0.8" filter="url(#glow)"/>
+    </g>
+  </g>
+
+  <!-- Right hexagon nodes -->
+  <g id="rightHexes">
+    <g transform="translate(412, 200)">
+      <polygon points="0,-12 10.4,-6 10.4,6 0,12 -10.4,6 -10.4,-6" fill="none" stroke="#00f5d4" strokeWidth="2.5" opacity="0.8" filter="url(#glow)"/>
+      <!-- Inner snowflake -->
+      <line x1="0" y1="-8" x2="0" y2="8" stroke="#00f5d4" strokeWidth="1" opacity="0.5"/>
+      <line x1="-6.9" y1="-4" x2="6.9" y2="4" stroke="#00f5d4" strokeWidth="1" opacity="0.5"/>
+      <line x1="-6.9" y1="4" x2="6.9" y2="-4" stroke="#00f5d4" strokeWidth="1" opacity="0.5"/>
+    </g>
+    <g transform="translate(412, 312)">
+      <polygon points="0,-12 10.4,-6 10.4,6 0,12 -10.4,6 -10.4,-6" fill="none" stroke="#00f5d4" strokeWidth="2.5" opacity="0.8" filter="url(#glow)"/>
+    </g>
+  </g>
+</svg>
