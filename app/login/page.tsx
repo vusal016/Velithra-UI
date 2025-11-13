@@ -23,8 +23,22 @@ export default function LoginPage() {
     setError("")
 
     try {
-      await login({ email, password })
-      router.push("/dashboard")
+      const response = await login({ email, password })
+      
+      // Check user role and redirect accordingly
+      const user = response
+      if (user && user.roles) {
+        // Admin has priority - if user has Admin role, go to dashboard
+        if (user.roles.includes("Admin")) {
+          router.push("/dashboard")
+        } else if (user.roles.includes("HR")) {
+          router.push("/hr/employees")
+        } else {
+          router.push("/dashboard")
+        }
+      } else {
+        router.push("/dashboard")
+      }
     } catch (err: any) {
       // Extract error message from the error
       const errorMessage = err.message || "Login failed. Please try again."

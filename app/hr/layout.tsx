@@ -1,24 +1,18 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { authService } from "@/lib/services/authService"
 import { Navbar } from "@/components/layout/navbar"
-import { Sidebar } from "@/components/layout/sidebar"
+import { HRSidebar } from "@/components/layout/hr-sidebar"
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function HRLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [user, setUser] = useState<{ email: string; role: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check authentication
+    // Check if user is authenticated and has HR role
     const currentUser = authService.getUser()
     
     if (!currentUser) {
@@ -26,20 +20,15 @@ export default function DashboardLayout({
       return
     }
 
-    // Check if user has Admin role
-    if (!authService.hasRole("Admin")) {
-      // If not admin, check if HR and redirect
-      if (authService.hasRole("HR")) {
-        router.push("/hr/employees")
-      } else {
-        router.push("/login")
-      }
+    // Check if user has HR role
+    if (!authService.hasRole("HR")) {
+      router.push("/dashboard")
       return
     }
 
     setUser({
       email: currentUser.email,
-      role: "Admin",
+      role: "HR",
     })
     setIsLoading(false)
   }, [router])
@@ -59,10 +48,14 @@ export default function DashboardLayout({
     )
   }
 
+  if (!user) {
+    return null
+  }
+
   return (
     <>
       <Navbar user={user} onLogout={handleLogout} />
-      <Sidebar />
+      <HRSidebar />
       <main className="ml-64">{children}</main>
     </>
   )

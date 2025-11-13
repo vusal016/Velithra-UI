@@ -14,7 +14,7 @@ interface UseAuthReturn {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<any>;
   register: (userData: RegisterRequest) => Promise<void>;
   logout: () => void;
   hasRole: (role: string) => boolean;
@@ -58,6 +58,8 @@ export const useAuth = (): UseAuthReturn => {
       toast.success('Login successful!', {
         description: `Welcome back, ${response.userName}!`,
       });
+
+      return response;
     } catch (error: any) {
       const errorMessage = error.message || 'Invalid credentials';
       toast.error('Login failed', {

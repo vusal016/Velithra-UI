@@ -4,10 +4,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, CheckSquare, Users, BookOpen, Package, MessageCircle, Bell, FileText, Settings } from "lucide-react"
+import { Home, CheckSquare, Users, BookOpen, Package, MessageCircle, Bell, FileText, Settings, UserPlus } from "lucide-react"
 
 const routes = [
   { href: "/dashboard", label: "Dashboard", icon: Home, active: true },
+  { href: "/dashboard/users/create", label: "Create User", icon: UserPlus, active: true },
   { href: "/dashboard/task", label: "Task Manager", icon: CheckSquare, active: true },
   { href: "/dashboard/hr", label: "HR Manager", icon: Users, active: true },
   { href: "/dashboard/course", label: "Course Manager", icon: BookOpen, active: true },
