@@ -46,10 +46,8 @@ export default function DashboardLayout({
   return (
     <>
       <Navbar user={user} onLogout={handleLogout} />
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1">{children}</main>
-      </div>
+      <Sidebar />
+      <main className="ml-64">{children}</main>
     </>
   )
 }

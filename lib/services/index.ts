@@ -6,6 +6,9 @@
 // Auth Service
 export { authService, AuthService } from './authService';
 
+// HR Service
+export { hrService, HRService } from './hrService';
+
 // CRUD Service
 export { CrudService } from './crudService';
 

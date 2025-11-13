@@ -137,23 +137,25 @@ export interface EmployeeDto {
   id: string;
   firstName: string;
   lastName: string;
+  dateOfBirth: string;
   email: string;
   phoneNumber: string;
-  departmentId: string;
-  positionId: string;
-  hireDate: Date;
-  salary: number;
+  address: string;
+  departmentName: string;
+  positionTitle: string;
+  status: 'Active' | 'OnLeave' | 'Terminated';
 }
 
 export interface EmployeeCreateDto {
   firstName: string;
   lastName: string;
+  dateOfBirth: string;
   email: string;
   phoneNumber: string;
-  departmentId: string;
+  address: string;
   positionId: string;
-  hireDate: Date;
-  salary: number;
+  departmentId: string;
+  hireDate: string;
 }
 
 export interface EmployeeUpdateDto {
@@ -171,7 +173,7 @@ export interface EmployeeUpdateDto {
 export interface DepartmentDto {
   id: string;
   name: string;
-  description?: string;
+  description: string;
 }
 
 export interface DepartmentCreateDto {
@@ -188,7 +190,8 @@ export interface DepartmentUpdateDto {
 export interface PositionDto {
   id: string;
   title: string;
-  description?: string;
+  description: string;
+  departmentId: string;
 }
 
 export interface PositionCreateDto {

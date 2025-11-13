@@ -20,48 +20,84 @@ export class AuthService {
    * Login user
    */
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<GenericResponse<AuthResponse>>(
-      '/auth/login',
-      credentials
-    );
+    try {
+      const response = await apiClient.post<GenericResponse<AuthResponse>>(
+        '/Auth/login',
+        credentials
+      );
 
-    const authData = response.data.data;
-    
-    if (authData) {
-      // Store token and user data
-      this.setToken(authData.token);
-      this.setUser({
-        userName: authData.userName,
-        email: authData.email,
-        roles: authData.roles,
-      });
+      const genericResponse = response.data;
+
+      // Check if request was successful
+      if (!genericResponse.success) {
+        const errorMessage = genericResponse.errors?.join(', ') || genericResponse.message;
+        throw new Error(errorMessage);
+      }
+
+      const authData = genericResponse.data;
+      
+      if (authData) {
+        // Store token and user data
+        this.setToken(authData.token);
+        this.setUser({
+          userName: authData.userName,
+          email: authData.email,
+          roles: authData.roles || [],
+        });
+      }
+
+      return authData!;
+    } catch (error: any) {
+      // Handle API errors
+      if (error.response?.data) {
+        const errorResponse = error.response.data as GenericResponse<any>;
+        const errorMessage = errorResponse.errors?.join(', ') || errorResponse.message || 'Login failed';
+        throw new Error(errorMessage);
+      }
+      throw error;
     }
-
-    return authData!;
   }
 
   /**
    * Register new user
    */
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<GenericResponse<AuthResponse>>(
-      '/auth/register',
-      userData
-    );
+    try {
+      const response = await apiClient.post<GenericResponse<AuthResponse>>(
+        '/Auth/register',
+        userData
+      );
 
-    const authData = response.data.data;
+      const genericResponse = response.data;
 
-    if (authData) {
-      // Store token and user data
-      this.setToken(authData.token);
-      this.setUser({
-        userName: authData.userName,
-        email: authData.email,
-        roles: authData.roles,
-      });
+      // Check if request was successful
+      if (!genericResponse.success) {
+        const errorMessage = genericResponse.errors?.join(', ') || genericResponse.message;
+        throw new Error(errorMessage);
+      }
+
+      const authData = genericResponse.data;
+
+      if (authData) {
+        // Store token and user data
+        this.setToken(authData.token);
+        this.setUser({
+          userName: authData.userName,
+          email: authData.email,
+          roles: authData.roles || [],
+        });
+      }
+
+      return authData!;
+    } catch (error: any) {
+      // Handle API errors
+      if (error.response?.data) {
+        const errorResponse = error.response.data as GenericResponse<any>;
+        const errorMessage = errorResponse.errors?.join(', ') || errorResponse.message || 'Registration failed';
+        throw new Error(errorMessage);
+      }
+      throw error;
     }
-
-    return authData!;
   }
 
   /**

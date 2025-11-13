@@ -51,7 +51,7 @@ export const useAuth = (): UseAuthReturn => {
       setUser({
         userName: response.userName,
         email: response.email,
-        roles: response.roles,
+        roles: response.roles || [],
       });
       setIsAuthenticated(true);
 
@@ -59,8 +59,9 @@ export const useAuth = (): UseAuthReturn => {
         description: `Welcome back, ${response.userName}!`,
       });
     } catch (error: any) {
+      const errorMessage = error.message || 'Invalid credentials';
       toast.error('Login failed', {
-        description: error.response?.data?.message || 'Invalid credentials',
+        description: errorMessage,
       });
       throw error;
     } finally {
@@ -79,7 +80,7 @@ export const useAuth = (): UseAuthReturn => {
       setUser({
         userName: response.userName,
         email: response.email,
-        roles: response.roles,
+        roles: response.roles || [],
       });
       setIsAuthenticated(true);
 
@@ -87,8 +88,9 @@ export const useAuth = (): UseAuthReturn => {
         description: `Welcome, ${response.userName}!`,
       });
     } catch (error: any) {
+      const errorMessage = error.message || 'Please try again';
       toast.error('Registration failed', {
-        description: error.response?.data?.message || 'Please try again',
+        description: errorMessage,
       });
       throw error;
     } finally {

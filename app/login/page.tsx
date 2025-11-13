@@ -26,13 +26,12 @@ export default function LoginPage() {
       await login({ email, password })
       router.push("/dashboard")
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || "Login failed. Please try again."
+      // Extract error message from the error
+      const errorMessage = err.message || "Login failed. Please try again."
       
-      // Check for specific backend configuration errors
-      if (errorMessage.includes("KeyedHashAlgorithm") || errorMessage.includes("IDX10720")) {
-        setError("Backend configuration error: JWT key is too short. Please contact administrator to fix backend JWT settings.")
-      } else if (err.code === "ERR_NETWORK") {
-        setError("Cannot connect to backend server. Please ensure backend is running on http://localhost:5233")
+      // Check for specific errors
+      if (err.code === "ERR_NETWORK") {
+        setError("Cannot connect to backend server. Please ensure backend is running on http://localhost:5000")
       } else {
         setError(errorMessage)
       }

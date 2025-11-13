@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -23,7 +24,7 @@ export function Sidebar() {
   const activeRoutes = routes.filter((route) => route.active)
 
   return (
-    <aside className="w-64 glass border-r min-h-screen p-6 space-y-2">
+    <aside className="w-64 glass border-r h-[calc(100vh-72px)] fixed top-[72px] left-0 p-6 space-y-2 z-40">
       <nav className="space-y-1">
         {activeRoutes.map(({ href, label, icon: Icon }) => (
           <Link
