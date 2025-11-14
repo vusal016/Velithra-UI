@@ -1,69 +1,61 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { motion } from "framer-motion"
-import { Plus, Search, Edit, Trash2, TrendingDown, AlertTriangle } from "lucide-react"
-
-interface InventoryItem {
-  id: string
-  name: string
-  sku: string
-  quantity: number
-  minStock: number
-  category: string
-  price: string
-  status: "in-stock" | "low-stock" | "out-of-stock"
-}
-
-const items: InventoryItem[] = [
-  {
-    id: "1",
-    name: "Laptop Computer",
-    sku: "LAPTOP-001",
-    quantity: 15,
-    minStock: 5,
-    category: "Electronics",
-    price: "$899.99",
-    status: "in-stock",
-  },
-  {
-    id: "2",
-    name: "Office Chair",
-    sku: "CHAIR-001",
-    quantity: 3,
-    minStock: 10,
-    category: "Furniture",
-    price: "$299.99",
-    status: "low-stock",
-  },
-  {
-    id: "3",
-    name: "Monitor Display",
-    sku: "MONITOR-001",
-    quantity: 0,
-    minStock: 3,
-    category: "Electronics",
-    price: "$399.99",
-    status: "out-of-stock",
-  },
-  {
-    id: "4",
-    name: "Desk Lamp",
-    sku: "LAMP-001",
-    quantity: 25,
-    minStock: 5,
-    category: "Lighting",
-    price: "$49.99",
-    status: "in-stock",
-  },
-]
+import { Plus, Search, Edit, Trash2, TrendingDown, AlertTriangle, Loader2 } from "lucide-react"
+import { itemService, categoryService } from "@/lib/services/api"
+import type { ItemDto } from "@/lib/types"
+import { toast } from "sonner"
 
 export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [displayItems, setDisplayItems] = useState(items)
+  const [items, setItems] = useState<ItemDto[]>([])
+  const [displayItems, setDisplayItems] = useState<ItemDto[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [selectedItem, setSelectedItem] = useState<ItemDto | null>(null)
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    quantity: 0,
+    categoryId: 0
+  })
+
+  useEffect(() => {
+    loadInventory()
+  }, [])
+
+  const loadInventory = async () => {
+    try {
+      setIsLoading(true)
+      const [itemsRes, categoriesRes] = await Promise.all([
+        itemService.getAll(),
+        categoryService.getAll(),
+      ])
+      const itemsData = itemsRes.data.data || itemsRes.data || []
+      const categoriesData = categoriesRes.data.data || categoriesRes.data || []
+      setItems(Array.isArray(itemsData) ? itemsData : [])
+      setDisplayItems(Array.isArray(itemsData) ? itemsData : [])
+      setCategories(Array.isArray(categoriesData) ? categoriesData : [])
+    } catch (error: any) {
+      console.error('Failed to load inventory:', error)
+      toast.error("Failed to load inventory", {
+        description: error.message || "Please try again later",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
@@ -71,9 +63,100 @@ export default function InventoryPage() {
       items.filter(
         (i) =>
           i.name.toLowerCase().includes(term.toLowerCase()) ||
-          i.sku.toLowerCase().includes(term.toLowerCase()) ||
-          i.category.toLowerCase().includes(term.toLowerCase()),
+          (i.description && i.description.toLowerCase().includes(term.toLowerCase())),
       ),
+    )
+  }
+
+  const getItemStatus = (item: ItemDto): "in-stock" | "low-stock" | "out-of-stock" => {
+    if (item.quantity === 0) return "out-of-stock"
+    if (item.quantity < 10) return "low-stock"
+    return "in-stock"
+  }
+
+  const handleCreate = () => {
+    setIsEditMode(false)
+    setSelectedItem(null)
+    setFormData({
+      name: "",
+      description: "",
+      quantity: 0,
+      categoryId: categories[0]?.id || 0
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleEdit = (item: ItemDto) => {
+    setIsEditMode(true)
+    setSelectedItem(item)
+    setFormData({
+      name: item.name,
+      description: item.description || "",
+      quantity: item.quantity,
+      categoryId: item.categoryId
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      setIsSubmitting(true)
+      if (isEditMode && selectedItem) {
+        await itemService.update(selectedItem.id, {
+          name: formData.name,
+          description: formData.description,
+          categoryId: formData.categoryId.toString(),
+        })
+        toast.success("Item updated successfully")
+      } else {
+        await itemService.create({
+          name: formData.name,
+          quantity: formData.quantity,
+          description: formData.description,
+          categoryId: formData.categoryId.toString(),
+        })
+        toast.success("Item created successfully")
+      }
+      setIsDialogOpen(false)
+      loadInventory()
+    } catch (error: any) {
+      console.error('Failed to save item:', error)
+      toast.error("Failed to save item", {
+        description: error.message || "Please try again"
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (itemId: string) => {
+    if (!confirm("Are you sure you want to delete this item?")) return
+    
+    try {
+      setIsSubmitting(true)
+      await itemService.delete(itemId)
+      toast.success("Item deleted successfully")
+      loadInventory()
+    } catch (error: any) {
+      console.error('Failed to delete item:', error)
+      toast.error("Failed to delete item", {
+        description: error.message || "Please try again"
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-foreground">Loading inventory...</p>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -86,7 +169,10 @@ export default function InventoryPage() {
             <h1 className="text-3xl font-bold text-foreground">Inventory Management</h1>
             <p className="text-muted mt-1">Manage inventory and stock levels</p>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary-dark text-background">
+          <Button 
+            onClick={handleCreate}
+            className="gap-2 bg-primary hover:bg-primary-dark text-background"
+          >
             <Plus size={18} />
             Add Item
           </Button>
@@ -117,12 +203,12 @@ export default function InventoryPage() {
             },
             {
               label: "Low Stock",
-              value: items.filter((i) => i.status === "low-stock").length,
+              value: items.filter((i) => getItemStatus(i) === "low-stock").length,
               color: "text-yellow-400",
             },
             {
               label: "Out of Stock",
-              value: items.filter((i) => i.status === "out-of-stock").length,
+              value: items.filter((i) => getItemStatus(i) === "out-of-stock").length,
               color: "text-red-400",
             },
           ].map((stat, i) => (
@@ -163,35 +249,47 @@ export default function InventoryPage() {
                     className="border-b border-white/5 hover:bg-white/5 transition"
                   >
                     <td className="px-6 py-4">{item.name}</td>
-                    <td className="px-6 py-4 text-muted text-xs font-mono">{item.sku}</td>
+                    <td className="px-6 py-4 text-muted text-xs font-mono">SKU-{item.id.substring(0, 6)}</td>
                     <td className="px-6 py-4">{item.quantity}</td>
-                    <td className="px-6 py-4 text-muted">{item.minStock}</td>
-                    <td className="px-6 py-4 text-muted">{item.category}</td>
-                    <td className="px-6 py-4 font-medium">{item.price}</td>
+                    <td className="px-6 py-4 text-muted">10</td>
+                    <td className="px-6 py-4 text-muted">{categories.find(c => c.id === item.categoryId)?.name || 'N/A'}</td>
+                    <td className="px-6 py-4 font-medium">-</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        {item.status === "low-stock" && <AlertTriangle size={14} className="text-yellow-400" />}
-                        {item.status === "out-of-stock" && <TrendingDown size={14} className="text-red-400" />}
+                        {getItemStatus(item) === "low-stock" && <AlertTriangle size={14} className="text-yellow-400" />}
+                        {getItemStatus(item) === "out-of-stock" && <TrendingDown size={14} className="text-red-400" />}
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            item.status === "in-stock"
+                            getItemStatus(item) === "in-stock"
                               ? "bg-primary/20 text-primary"
-                              : item.status === "low-stock"
+                              : getItemStatus(item) === "low-stock"
                                 ? "bg-yellow-500/20 text-yellow-400"
                                 : "bg-red-500/20 text-red-400"
                           }`}
                         >
-                          {item.status}
+                          {getItemStatus(item)}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEdit(item)}
+                          disabled={isSubmitting}
+                        >
                           <Edit size={16} />
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400">
-                          <Trash2 size={16} />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-red-400"
+                          onClick={() => handleDelete(item.id)}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
                         </Button>
                       </div>
                     </td>
@@ -201,6 +299,80 @@ export default function InventoryPage() {
             </table>
           </div>
         </GlassCard>
+
+        {/* Create/Edit Dialog */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="bg-background border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">
+                {isEditMode ? "Edit Item" : "Add Item"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-foreground">Item Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Enter item name"
+                  className="bg-white/5 border-white/10 text-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-foreground">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Enter item description"
+                  className="bg-white/5 border-white/10 text-foreground"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity" className="text-foreground">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                    placeholder="0"
+                    className="bg-white/5 border-white/10 text-foreground"
+                  />
+                </div>
+
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category" className="text-foreground">Category</Label>
+                <Select
+                  value={formData.categoryId.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, categoryId: Number(value) })}
+                >
+                  <SelectTrigger className="bg-white/5 border-white/10 text-foreground">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border">
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id.toString()} className="text-foreground">
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} className="bg-primary hover:bg-primary-dark text-background" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : (isEditMode ? "Update" : "Create")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

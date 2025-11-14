@@ -1,34 +1,83 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { motion } from "framer-motion"
-import { Plus, Search, Edit, Trash2, Briefcase, Loader2 } from "lucide-react"
-import { hrService } from "@/lib/services/hrService"
-import type { PositionDto } from "@/lib/types/module.types"
+import { Plus, Search, Edit, Trash2, Briefcase, Loader2, X } from "lucide-react"
+import { positionService, departmentService } from "@/lib/services/api"
+import type { PositionDto, DepartmentDto } from "@/lib/types"
 import { toast } from "sonner"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function PositionsPage() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [positions, setPositions] = useState<PositionDto[]>([])
   const [displayPositions, setDisplayPositions] = useState<PositionDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  
+  // Dialog states
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [selectedPosition, setSelectedPosition] = useState<PositionDto | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    departmentId: "",
+  })
+  
+  const [departments, setDepartments] = useState<DepartmentDto[]>([])
 
   useEffect(() => {
     loadPositions()
+    loadDepartments()
   }, [])
+  
+  const loadDepartments = async () => {
+    try {
+      const response = await departmentService.getAll()
+      const data = response.data.data || response.data || []
+      setDepartments(Array.isArray(data) ? data : [])
+    } catch (error: any) {
+      console.error('Failed to load departments:', error)
+    }
+  }
 
   const loadPositions = async () => {
     try {
       setIsLoading(true)
-      const data = await hrService.getAllPositions()
-      setPositions(data)
-      setDisplayPositions(data)
+      const response = await positionService.getAll()
+      const data = response.data.data || response.data || []
+      setPositions(Array.isArray(data) ? data : [])
+      setDisplayPositions(Array.isArray(data) ? data : [])
     } catch (error: any) {
+      console.error('Failed to load positions:', error)
       toast.error("Failed to load positions", {
-        description: error.message || "Please try again later",
+        description: error.response?.data?.message || error.message || "Please try again later",
       })
     } finally {
       setIsLoading(false)
@@ -41,6 +90,100 @@ export default function PositionsPage() {
       (p) => p.title.toLowerCase().includes(term.toLowerCase()),
     )
     setDisplayPositions(filtered)
+  }
+
+  // CRUD Handlers
+  const handleCreate = () => {
+    setFormData({ title: "", description: "", departmentId: "" })
+    setShowCreateDialog(true)
+  }
+
+  const handleEdit = (position: PositionDto) => {
+    setSelectedPosition(position)
+    setFormData({
+      title: position.title,
+      description: position.description || "",
+      departmentId: position.departmentId,
+    })
+    setShowEditDialog(true)
+  }
+
+  const handleDeleteClick = (position: PositionDto) => {
+    setSelectedPosition(position)
+    setShowDeleteDialog(true)
+  }
+
+  const handleSubmitCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.title.trim()) {
+      toast.error("Position title is required")
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await positionService.create({
+        title: formData.title,
+        description: formData.description || undefined,
+        departmentId: formData.departmentId || departments[0]?.id || '',
+      })
+      toast.success("Position created successfully")
+      setShowCreateDialog(false)
+      loadPositions()
+    } catch (error: any) {
+      console.error('Failed to create position:', error)
+      toast.error("Failed to create position", {
+        description: error.response?.data?.message || error.message || "Please try again",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedPosition || !formData.title.trim()) {
+      toast.error("Position title is required")
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await positionService.update(selectedPosition.id, {
+        title: formData.title,
+        description: formData.description || undefined,
+        departmentId: formData.departmentId || selectedPosition.departmentId,
+      })
+      toast.success("Position updated successfully")
+      setShowEditDialog(false)
+      loadPositions()
+    } catch (error: any) {
+      console.error('Failed to update position:', error)
+      toast.error("Failed to update position", {
+        description: error.response?.data?.message || error.message || "Please try again",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!selectedPosition) return
+
+    try {
+      setIsSubmitting(true)
+      await positionService.delete(selectedPosition.id)
+      toast.success("Position deleted successfully")
+      setShowDeleteDialog(false)
+      loadPositions()
+    } catch (error: any) {
+      console.error('Failed to delete position:', error)
+      toast.error("Failed to delete position", {
+        description: error.response?.data?.message || error.message || "Please try again",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isLoading) {
@@ -65,7 +208,7 @@ export default function PositionsPage() {
             <h1 className="text-3xl font-bold text-white">Positions</h1>
             <p className="text-gray-300 mt-1">Manage job positions and roles</p>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary-dark text-background">
+          <Button onClick={handleCreate} className="gap-2 bg-primary hover:bg-primary-dark text-background">
             <Plus size={18} />
             Add Position
           </Button>
@@ -141,11 +284,11 @@ export default function PositionsPage() {
                     </div>
 
                     <div className="flex gap-2 pt-4 border-t border-white/10">
-                      <Button size="sm" variant="ghost" className="gap-2">
+                      <Button size="sm" variant="ghost" className="gap-2" onClick={() => handleEdit(position)}>
                         <Edit size={16} />
                         Edit
                       </Button>
-                      <Button size="sm" variant="ghost" className="gap-2 text-red-400">
+                      <Button size="sm" variant="ghost" className="gap-2 text-red-400" onClick={() => handleDeleteClick(position)}>
                         <Trash2 size={16} />
                         Delete
                       </Button>
@@ -157,6 +300,138 @@ export default function PositionsPage() {
           )}
         </div>
       </div>
+
+      {/* Create Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="bg-[#1a2332] border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white">Create Position</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Add a new position to your organization
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitCreate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title" className="text-white">Position Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="bg-white/5 border-white/10 text-white"
+                placeholder="e.g., Senior Developer"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description" className="text-white">Description</Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="bg-white/5 border-white/10 text-white"
+                placeholder="Position description"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 bg-primary hover:bg-primary-dark"
+              >
+                {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : "Create"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowCreateDialog(false)}
+                disabled={isSubmitting}
+                className="text-white"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="bg-[#1a2332] border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white">Edit Position</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Update position information
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title" className="text-white">Position Title *</Label>
+              <Input
+                id="edit-title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="bg-white/5 border-white/10 text-white"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description" className="text-white">Description</Label>
+              <Input
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="bg-white/5 border-white/10 text-white"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 bg-primary hover:bg-primary-dark"
+              >
+                {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : "Save Changes"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowEditDialog(false)}
+                disabled={isSubmitting}
+                className="text-white"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-[#1a2332] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Delete Position</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Are you sure you want to delete <strong className="text-white">{selectedPosition?.title}</strong>? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              disabled={isSubmitting}
+              className="bg-white/5 text-white hover:bg-white/10 border-white/10"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isSubmitting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  )
+  );
 }

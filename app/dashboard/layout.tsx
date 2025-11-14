@@ -2,11 +2,15 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter } from "next/navigation"
-import { authService } from "@/lib/services/authService"
 import { Navbar } from "@/components/layout/navbar"
-import { Sidebar } from "@/components/layout/sidebar"
+import { DynamicSidebar } from "@/components/layout/dynamic-sidebar"
+import { useAuthContext } from "@/components/providers/auth-provider"
+import { FullPageLoader, DashboardSkeleton } from "@/components/common/LoadingStates"
+import { ErrorBoundary } from "@/components/common/ErrorBoundary"
+import { useKeyboardNavigation, SkipToContent } from "@/hooks/use-keyboard-navigation"
+import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt"
 
 export default function DashboardLayout({
   children,
@@ -14,56 +18,49 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const [user, setUser] = useState<{ email: string; role: string } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { user, isAuthenticated, isLoading, hasRole, logout } = useAuthContext();
+
+  // Enable keyboard navigation
+  useKeyboardNavigation();
 
   useEffect(() => {
-    // Check authentication
-    const currentUser = authService.getUser()
-    
-    if (!currentUser) {
-      router.push("/login")
-      return
-    }
-
-    // Check if user has Admin role
-    if (!authService.hasRole("Admin")) {
-      // If not admin, check if HR and redirect
-      if (authService.hasRole("HR")) {
-        router.push("/hr/employees")
-      } else {
-        router.push("/login")
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.push("/login");
+        return;
       }
-      return
+      // All authenticated users can access dashboard
+      // Role-based content is handled in individual pages
     }
-
-    setUser({
-      email: currentUser.email,
-      role: "Admin",
-    })
-    setIsLoading(false)
-  }, [router])
+  }, [isAuthenticated, isLoading, router]);
 
   const handleLogout = () => {
-    authService.logout()
+    logout();
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto mb-4" />
-          <p className="text-muted">Loading...</p>
-        </div>
-      </div>
-    )
+    return <FullPageLoader message="Loading dashboard..." />;
   }
 
+  // Adapt user object for Navbar (ensure it has email and role)
+  const navbarUser = user ? {
+    email: user.email,
+    role: Array.isArray(user.roles) && user.roles.length > 0 
+      ? user.roles[0].charAt(0).toUpperCase() + user.roles[0].slice(1).toLowerCase()
+      : "User"
+  } : null;
+
   return (
-    <>
-      <Navbar user={user} onLogout={handleLogout} />
-      <Sidebar />
-      <main className="ml-64">{children}</main>
-    </>
-  )
+    <ErrorBoundary>
+      <SkipToContent />
+      <Navbar user={navbarUser} onLogout={handleLogout} />
+      <DynamicSidebar />
+      <main id="main-content" role="main" aria-label="Dashboard content" className="ml-64 pt-[72px]">
+        <Suspense fallback={<DashboardSkeleton />}>
+          {children}
+        </Suspense>
+      </main>
+      <PWAInstallPrompt />
+    </ErrorBoundary>
+  );
 }

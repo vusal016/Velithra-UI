@@ -1,65 +1,109 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { GlassCard } from "@/components/ui/glass-card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { motion } from "framer-motion"
-import { Plus, Search, Edit, Trash2, Mail, Loader2 } from "lucide-react"
-import { hrService } from "@/lib/services/hrService"
-import type { EmployeeDto } from "@/lib/types/module.types"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { GlassCard } from "@/components/ui/glass-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Mail,
+  Loader2,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { employeeService } from "@/lib/services/api";
+import type { EmployeeDto } from "@/lib/types";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function EmployeesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [employees, setEmployees] = useState<EmployeeDto[]>([])
-  const [displayEmployees, setDisplayEmployees] = useState<EmployeeDto[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [employees, setEmployees] = useState<EmployeeDto[]>([]);
+  const [displayEmployees, setDisplayEmployees] = useState<EmployeeDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    employeeId: string;
+    employeeName: string;
+  }>({ open: false, employeeId: "", employeeName: "" });
+  const [deleting, setDeleting] = useState(false);
+
+  const pageSize = 10;
 
   useEffect(() => {
-    loadEmployees()
-  }, [])
+    loadEmployees();
+  }, [currentPage]);
 
   const loadEmployees = async () => {
     try {
-      setIsLoading(true)
-      const data = await hrService.getAllEmployees()
-      setEmployees(data)
-      setDisplayEmployees(data)
+      setIsLoading(true);
+      const response = await employeeService.getPaged(currentPage, pageSize);
+      const data = response.data.data || response.data;
+      setEmployees(data.items || []);
+      setDisplayEmployees(data.items || []);
+      setTotalPages(data.totalPages || 1);
     } catch (error: any) {
+      console.error('Failed to load employees:', error);
       toast.error("Failed to load employees", {
-        description: error.message || "Please try again later",
-      })
+        description: error.response?.data?.message || error.message
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      Active: "bg-green-500/20 text-green-400 border-green-500/30",
+      OnLeave: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+      Terminated: "bg-red-500/20 text-red-400 border-red-500/30",
+    };
+    return statusConfig[status as keyof typeof statusConfig] || statusConfig.Active;
+  };
 
   const handleSearch = (term: string) => {
-    setSearchTerm(term)
+    setSearchTerm(term);
     const filtered = employees.filter(
       (e) =>
         e.firstName.toLowerCase().includes(term.toLowerCase()) ||
         e.lastName.toLowerCase().includes(term.toLowerCase()) ||
-        e.email.toLowerCase().includes(term.toLowerCase()) ||
-        e.departmentName.toLowerCase().includes(term.toLowerCase()),
-    )
-    setDisplayEmployees(filtered)
-  }
+        e.email.toLowerCase().includes(term.toLowerCase())
+    );
+    setDisplayEmployees(filtered);
+  };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this employee?")) return
-
+  const handleDelete = async () => {
     try {
-      await hrService.deleteEmployee(id)
-      toast.success("Employee deleted successfully")
-      loadEmployees()
+      setDeleting(true);
+      await employeeService.delete(deleteDialog.employeeId);
+      toast.success("Employee deleted successfully");
+      setDeleteDialog({ open: false, employeeId: "", employeeName: "" });
+      loadEmployees();
     } catch (error: any) {
-      toast.error("Failed to delete employee", {
-        description: error.message || "Please try again",
-      })
+      toast.error(error.message || "Failed to delete employee");
+    } finally {
+      setDeleting(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -83,7 +127,10 @@ export default function EmployeesPage() {
             <h1 className="text-3xl font-bold text-white">Employee Directory</h1>
             <p className="text-gray-300 mt-1">Manage company workforce</p>
           </div>
-          <Button className="gap-2 bg-primary hover:bg-primary-dark text-background">
+          <Button
+            onClick={() => router.push("/hr/employees/create")}
+            className="gap-2 bg-[#00d9ff] hover:bg-[#0099cc] text-[#0a1628] font-semibold"
+          >
             <Plus size={18} />
             Add Employee
           </Button>
@@ -162,31 +209,38 @@ export default function EmployeesPage() {
                           <p className="text-xs text-gray-400 uppercase">Department</p>
                           <p className="text-white font-medium">{employee.departmentName}</p>
                         </div>
+                        <div className="text-sm">
+                          <p className="text-xs text-gray-400 uppercase">Position</p>
+                          <p className="text-white font-medium">{employee.positionTitle}</p>
+                        </div>
                         <div>
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              employee.status === "Active"
-                                ? "bg-primary/20 text-primary"
-                                : employee.status === "OnLeave"
-                                  ? "bg-yellow-500/20 text-yellow-400"
-                                  : "bg-red-500/20 text-red-400"
-                            }`}
-                          >
+                          <Badge className={getStatusBadge(employee.status)}>
                             {employee.status}
-                          </span>
+                          </Badge>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex gap-2 ml-4">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-[#00d9ff] hover:text-[#0099cc]"
+                        onClick={() => router.push(`/hr/employees/edit/${employee.id}`)}
+                      >
                         <Edit size={16} />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         className="h-8 w-8 p-0 text-red-400"
-                        onClick={() => handleDelete(employee.id)}
+                        onClick={() =>
+                          setDeleteDialog({
+                            open: true,
+                            employeeId: employee.id,
+                            employeeName: `${employee.firstName} ${employee.lastName}`,
+                          })
+                        }
                       >
                         <Trash2 size={16} />
                       </Button>
@@ -197,7 +251,77 @@ export default function EmployeesPage() {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <GlassCard>
+            <div className="flex items-center justify-between p-4">
+              <p className="text-sm text-gray-300">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="text-white"
+                >
+                  <ChevronLeft size={18} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="text-white"
+                >
+                  <ChevronRight size={18} />
+                </Button>
+              </div>
+            </div>
+          </GlassCard>
+        )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => !deleting && setDeleteDialog({ open, employeeId: "", employeeName: "" })}
+      >
+        <AlertDialogContent className="bg-[#1a2332] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <AlertTriangle className="text-red-400" size={24} />
+              Delete Employee
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-300">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-white">{deleteDialog.employeeName}</span>? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting} className="bg-white/5 text-white hover:bg-white/10 border-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  )
+  );
 }

@@ -1,123 +1,171 @@
 /**
  * Velithra API - Authentication Service
- * Handles login, register, logout, and token management
+ * Backend API Endpoint: /api/Auth
+ * Port: 5000
  */
 
-import apiClient from '@/lib/api/client';
-import type {
-  LoginRequest,
-  RegisterRequest,
-  AuthResponse,
-  GenericResponse,
-  User,
-} from '@/lib/types';
+import apiClient from '../api/client';
 
-const TOKEN_KEY = 'velithra_token';
-const USER_KEY = 'velithra_user';
+interface RegisterDto {
+  email: string;
+  userName: string;
+  password: string;
+  confirmPassword: string;
+}
 
-export class AuthService {
+interface LoginDto {
+  email: string;
+  password: string;
+}
+
+interface AuthResponse {
+  token: string;
+  refreshToken?: string;
+  expiration: string;
+  userName: string;
+  email: string;
+  roles: string[];
+}
+
+interface UpdateUserDto {
+  userId: string;
+  fullName?: string;
+  phoneNumber?: string;
+}
+
+export const authService = {
   /**
-   * Login user
+   * POST /api/Auth/register - User registration
    */
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
+  async register(data: RegisterDto): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<GenericResponse<AuthResponse>>(
-        '/Auth/login',
-        credentials
-      );
-
-      const genericResponse = response.data;
-
-      // Check if request was successful
-      if (!genericResponse.success) {
-        const errorMessage = genericResponse.errors?.join(', ') || genericResponse.message;
-        throw new Error(errorMessage);
+      const response = await apiClient.post('/auth/register', data);
+      if (response.data.success) {
+        this.saveAuthData(response.data.data);
+        return response.data.data;
       }
-
-      const authData = genericResponse.data;
-      
-      if (authData) {
-        // Store token and user data
-        this.setToken(authData.token);
-        this.setUser({
-          userName: authData.userName,
-          email: authData.email,
-          roles: authData.roles || [],
-        });
-      }
-
-      return authData!;
+      throw new Error(response.data.message || 'Registration failed');
     } catch (error: any) {
-      // Handle API errors
-      if (error.response?.data) {
-        const errorResponse = error.response.data as GenericResponse<any>;
-        const errorMessage = errorResponse.errors?.join(', ') || errorResponse.message || 'Login failed';
-        throw new Error(errorMessage);
-      }
-      throw error;
+      throw new Error(error.response?.data?.message || error.message || 'Registration failed');
     }
-  }
+  },
 
   /**
-   * Register new user
+   * POST /api/Auth/login - User login
    */
-  async register(userData: RegisterRequest): Promise<AuthResponse> {
+  async login(data: LoginDto): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<GenericResponse<AuthResponse>>(
-        '/Auth/register',
-        userData
-      );
-
-      const genericResponse = response.data;
-
-      // Check if request was successful
-      if (!genericResponse.success) {
-        const errorMessage = genericResponse.errors?.join(', ') || genericResponse.message;
-        throw new Error(errorMessage);
+      const response = await apiClient.post('/auth/login', data);
+      if (response.data.success) {
+        this.saveAuthData(response.data.data);
+        return response.data.data;
       }
-
-      const authData = genericResponse.data;
-
-      if (authData) {
-        // Store token and user data
-        this.setToken(authData.token);
-        this.setUser({
-          userName: authData.userName,
-          email: authData.email,
-          roles: authData.roles || [],
-        });
-      }
-
-      return authData!;
+      throw new Error(response.data.message || 'Login failed');
     } catch (error: any) {
-      // Handle API errors
-      if (error.response?.data) {
-        const errorResponse = error.response.data as GenericResponse<any>;
-        const errorMessage = errorResponse.errors?.join(', ') || errorResponse.message || 'Registration failed';
-        throw new Error(errorMessage);
-      }
-      throw error;
+      throw new Error(error.response?.data?.message || error.message || 'Login failed');
     }
-  }
+  },
 
   /**
-   * Logout user
+   * GET /api/Auth/{userId} - Get user details
    */
-  logout(): void {
-    this.clearAuth();
-    
-    // Redirect to login page
+  async getUserDetails(userId: string): Promise<any> {
+    try {
+      const response = await apiClient.get(`/auth/${userId}`);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      throw new Error(response.data.message || 'Failed to fetch user details');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to fetch user details');
+    }
+  },
+
+  /**
+   * PUT /api/Auth/update - Update user
+   */
+  async updateUser(data: UpdateUserDto): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.put('/auth/update', data);
+      if (response.data.success) {
+        this.saveAuthData(response.data.data);
+        return response.data.data;
+      }
+      throw new Error(response.data.message || 'Failed to update user');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to update user');
+    }
+  },
+
+  /**
+   * DELETE /api/Auth/{userId} - Delete user
+   */
+  async deleteUser(userId: string): Promise<boolean> {
+    try {
+      const response = await apiClient.delete(`/auth/${userId}`);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      throw new Error(response.data.message || 'Failed to delete user');
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || error.message || 'Failed to delete user');
+    }
+  },
+
+  /**
+   * Save authentication data to localStorage
+   */
+  saveAuthData(data: AuthResponse) {
     if (typeof window !== 'undefined') {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify({
+        userName: data.userName,
+        email: data.email,
+        roles: data.roles,
+        expiration: data.expiration
+      }));
+    }
+    // Token will be added automatically by apiClient interceptor
+  },
+
+  /**
+   * Logout - Clear all auth data
+   */
+  logout() {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
-  }
+  },
+
+  /**
+   * Get JWT token from localStorage
+   */
+  getToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token');
+    }
+    return null;
+  },
+
+  /**
+   * Get current user from localStorage
+   */
+  getUser(): any {
+    if (typeof window !== 'undefined') {
+      const user = localStorage.getItem('user');
+      return user ? JSON.parse(user) : null;
+    }
+    return null;
+  },
 
   /**
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
     return !!this.getToken();
-  }
+  },
 
   /**
    * Check if user has specific role
@@ -125,69 +173,35 @@ export class AuthService {
   hasRole(role: string): boolean {
     const user = this.getUser();
     return user?.roles?.includes(role) || false;
-  }
+  },
 
   /**
    * Check if user has any of the specified roles
    */
   hasAnyRole(roles: string[]): boolean {
     const user = this.getUser();
-    return roles.some((role) => user?.roles?.includes(role));
-  }
+    if (!user?.roles) return false;
+    return roles.some((role) => user.roles.includes(role));
+  },
 
   /**
-   * Get current user
+   * Get current user ID
    */
-  getUser(): User | null {
-    if (typeof window === 'undefined') return null;
-    
-    const userJson = localStorage.getItem(USER_KEY);
-    if (!userJson) return null;
-
-    try {
-      return JSON.parse(userJson) as User;
-    } catch {
-      return null;
-    }
-  }
+  getUserId(): string | null {
+    const user = this.getUser();
+    return user?.id || user?.userId || null;
+  },
 
   /**
-   * Get current token
+   * Get role-specific redirect path
    */
-  getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem(TOKEN_KEY);
+  getRoleRedirectPath(): string {
+    const user = this.getUser();
+    if (!user || !user.roles) return "/login";
+    if (user.roles.includes("Admin")) return "/dashboard";
+    if (user.roles.includes("Manager")) return "/hr/employees";
+    if (user.roles.includes("HR")) return "/hr/employees";
+    if (user.roles.includes("User")) return "/user/dashboard";
+    return "/";
   }
-
-  /**
-   * Set token
-   */
-  private setToken(token: string): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(TOKEN_KEY, token);
-    }
-  }
-
-  /**
-   * Set user data
-   */
-  private setUser(user: User): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-    }
-  }
-
-  /**
-   * Clear authentication data
-   */
-  private clearAuth(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-    }
-  }
-}
-
-// Export singleton instance
-export const authService = new AuthService();
-export default authService;
+};

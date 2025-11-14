@@ -36,7 +36,7 @@ export interface RegisterRequest {
   userName: string;
   email: string;
   password: string;
-  fullName: string;
+  confirmPassword: string;
 }
 
 export interface AuthResponse {
@@ -57,35 +57,35 @@ export interface User {
 // CORE ENTITY TYPES
 // ============================================
 
-// AppUser
+// AppUser (matches backend API exactly)
 export interface AppUserDto {
   id: string;
   userName: string;
   email: string;
   fullName: string;
-  profileImageUrl?: string;
-  bio?: string;
-  createdAt: Date;
-  updatedAt?: Date;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AppUserCreateDto {
-  userName: string;
   email: string;
+  userName: string;
+  fullName: string;
   password: string;
   roleId: string;
-  fullName?: string;
-  profileImageUrl?: string;
-  bio?: string;
 }
 
 export interface AppUserUpdateDto {
   id: string;
-  userName?: string;
-  email?: string;
-  fullName?: string;
-  profileImageUrl?: string;
-  bio?: string;
+  userName: string;
+  email: string;
+}
+
+export interface UpdateUserRequest {
+  id: string;
+  email: string;
+  userName: string;
+  password?: string;
 }
 
 // AppLog
@@ -153,7 +153,7 @@ export interface NotificationDto {
   title: string;
   message: string;
   isRead: boolean;
-  createdAt: Date;
+  sentAt: string;
 }
 
 export interface NotificationCreateDto {
@@ -211,17 +211,62 @@ export interface UserPreferenceUpdateDto {
   value?: string;
 }
 
-// Dashboard
+// Dashboard (matches backend endpoints)
 export interface DashboardStatistics {
   users: number;
   roles: number;
-  logs: number;
   notifications: number;
 }
 
-export interface DashboardData {
+export interface AdminDashboardData {
   users: number;
   roles: number;
-  logs: number;
-  unread: number;
+  notifications: number;
+}
+
+export interface ManagerDashboardData {
+  userId: string;
+  notifications: number;
+}
+
+export interface UserDashboardData {
+  userId: string;
+  notifications: number;
+}
+
+// ============================================
+// USER CONTEXT & ROLE DETECTION
+// ============================================
+
+export interface CurrentUser {
+  id: string;
+  userName: string;
+  email: string;
+  fullName?: string;
+  roles: string[];
+}
+
+export type UserRole = 'Admin' | 'Manager' | 'User';
+
+export interface RoleRedirect {
+  role: UserRole;
+  path: string;
+}
+
+// ============================================
+// EMPLOYEE-USER LINKING
+// ============================================
+
+export interface EmployeeUserLink {
+  employeeId: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface EnrollmentEligibility {
+  isEligible: boolean;
+  employeeId?: string;
+  reason?: string;
 }

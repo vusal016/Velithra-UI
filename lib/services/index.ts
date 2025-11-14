@@ -1,52 +1,22 @@
 /**
- * Velithra API Services - Index
- * Central export point for all services
+ * Velithra API - Service Exports
+ * Central export point for all API services
  */
 
-// Auth Service
-export { authService, AuthService } from './authService';
-
-// HR Service
-export { hrService, HRService } from './hrService';
-
-// CRUD Service
-export { CrudService } from './crudService';
+// Authentication Service
+export { authService } from './authService';
 
 // Core Services
-export {
-  appLogService,
-  appUserService,
-  roleService,
-  systemSettingService,
-  notificationService,
-  notificationServiceExtended,
-  auditLogService,
-  userPreferenceService,
-  dashboardService,
-} from './coreServices';
+export * from './coreServices';
+
+// HR Services
+export * from './hrService';
 
 // Module Services
-export {
-  // Chat
-  chatRoomService,
-  chatServiceExtended,
-  // Inventory
-  itemService,
-  categoryService,
-  stockTransactionService,
-  // HR
-  employeeService,
-  departmentService,
-  positionService,
-  // Course
-  courseService,
-  lessonService,
-  enrollmentService,
-  // Task
-  taskService,
-  // Module Manager
-  moduleService,
-} from './moduleServices';
+export * from './moduleServices';
 
 // SignalR Service
 export { signalRService } from './signalrService';
+
+// Legacy CRUD Service
+export { CrudService } from './crudService';

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { GlassCard } from "@/components/ui/glass-card"
@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { VelithraLogo } from "@/components/logo/velithra-logo"
 import { useAuth } from "@/hooks/use-auth"
+import { authService } from "@/lib/services/authService"
+import ENV from "@/lib/config/env"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,34 +20,31 @@ export default function LoginPage() {
   const [password, setPassword] = useState("Admin123!")
   const [error, setError] = useState("")
 
+  // Clear localStorage on mount to fix sidebar issue
+  useEffect(() => {
+    localStorage.removeItem('velithra-modules');
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
 
     try {
-      const response = await login({ email, password })
+      // Clear cache before login
+      localStorage.clear();
       
-      // Check user role and redirect accordingly
-      const user = response
-      if (user && user.roles) {
-        // Admin has priority - if user has Admin role, go to dashboard
-        if (user.roles.includes("Admin")) {
-          router.push("/dashboard")
-        } else if (user.roles.includes("HR")) {
-          router.push("/hr/employees")
-        } else {
-          router.push("/dashboard")
-        }
-      } else {
-        router.push("/dashboard")
-      }
+      await login({ email, password })
+      
+      // Role-based redirect using authService helper
+      const redirectPath = authService.getRoleRedirectPath()
+      router.push(redirectPath)
     } catch (err: any) {
       // Extract error message from the error
       const errorMessage = err.message || "Login failed. Please try again."
       
       // Check for specific errors
       if (err.code === "ERR_NETWORK") {
-        setError("Cannot connect to backend server. Please ensure backend is running on http://localhost:5000")
+        setError(`Cannot connect to backend server. Please ensure backend is running on ${ENV.API_BASE_URL.replace('/api', '')}`)
       } else {
         setError(errorMessage)
       }
@@ -72,6 +71,11 @@ export default function LoginPage() {
                   <div className="flex-1">
                     <p className="text-red-400 font-medium mb-1">Login Failed</p>
                     <p className="text-red-300/80 text-xs leading-relaxed">{error}</p>
+                    {error.includes("Cannot connect") && (
+                      <Link href="/test-api" className="text-xs text-blue-400 underline mt-2 block">
+                        → Test API Connection
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

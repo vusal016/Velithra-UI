@@ -21,48 +21,142 @@ const apiClient: AxiosInstance = axios.create({
 // ============================================
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get token from localStorage
-    const token = localStorage.getItem('velithra_token');
-    
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    try {
+      // Get token from localStorage (check both keys for backward compatibility)
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const token = localStorage.getItem('token') || localStorage.getItem('velithra_token');
+        
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
 
-    // Log request in development
-    if (ENV.IS_DEVELOPMENT) {
-      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
-        headers: config.headers,
-        data: config.data,
-      });
+      // Log request in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+          headers: config.headers,
+          data: config.data,
+        });
+      }
+    } catch (err) {
+      // Silently fail if there's an error
+      console.warn('Request interceptor error:', err);
     }
 
     return config;
   },
   (error) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[API Request Error]', error);
+    }
     return Promise.reject(error);
   }
 );
 
 // ============================================
-// RESPONSE INTERCEPTOR - Handle Errors
+// TOKEN REFRESH LOGIC
+// ============================================
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+};
+
+const refreshAccessToken = async (): Promise<string> => {
+  try {
+    const refreshToken = typeof window !== 'undefined' 
+      ? localStorage.getItem('refreshToken') || localStorage.getItem('velithra_refresh_token')
+      : null;
+
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await axios.post<GenericResponse<{ token: string; refreshToken: string }>>(
+      `${ENV.API_BASE_URL}/Auth/refresh`,
+      { refreshToken },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (response.data.success && response.data.data) {
+      const { token, refreshToken: newRefreshToken } = response.data.data;
+      
+      // Update tokens
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', token);
+        localStorage.setItem('velithra_token', token);
+        if (newRefreshToken) {
+          localStorage.setItem('refreshToken', newRefreshToken);
+          localStorage.setItem('velithra_refresh_token', newRefreshToken);
+        }
+      }
+
+      return token;
+    }
+
+    throw new Error('Token refresh failed');
+  } catch (error) {
+    // Clear auth data on refresh failure
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('velithra_token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('velithra_refresh_token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('velithra_user');
+    }
+    throw error;
+  }
+};
+
+// ============================================
+// RESPONSE INTERCEPTOR - Handle Errors & Unwrap GenericResponse
 // ============================================
 apiClient.interceptors.response.use(
   (response) => {
-    // Log response in development
-    if (ENV.IS_DEVELOPMENT) {
-      console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
+    try {
+      // Log response in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
+      }
+
+      // Unwrap GenericResponse if present
+      if (response.data && typeof response.data === 'object' && 'data' in response.data && 'isSuccess' in response.data) {
+        console.log('[API] Unwrapping GenericResponse, actual data:', response.data.data);
+        // Replace response.data with the unwrapped data
+        response.data = response.data.data;
+      }
+    } catch (err) {
+      // Silently fail
+      console.warn('[API] Response unwrap error:', err);
     }
     return response;
   },
-  (error: AxiosError<GenericResponse<any>>) => {
-    // Log error in development
-    if (ENV.IS_DEVELOPMENT) {
-      console.error('[API Error]', {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        data: error.response?.data,
-      });
+  async (error: AxiosError<GenericResponse<any>>) => {
+    try {
+      // Log error in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[API Error]', {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
+      }
+    } catch (err) {
+      // Silently fail
     }
 
     // Handle specific error cases
@@ -70,14 +164,54 @@ apiClient.interceptors.response.use(
       const { status, data } = error.response;
 
       switch (status) {
-        case 401: // Unauthorized
-          // Clear auth data and redirect to login
-          localStorage.removeItem('velithra_token');
-          localStorage.removeItem('velithra_user');
+        case 401: // Unauthorized - Try token refresh
+          const originalRequest = error.config;
           
-          // Only redirect if not already on login page
-          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+          if (originalRequest && !originalRequest.headers?.['X-Retry']) {
+            if (isRefreshing) {
+              // Queue the request
+              return new Promise((resolve, reject) => {
+                failedQueue.push({ resolve, reject });
+              })
+                .then((token) => {
+                  originalRequest.headers!.Authorization = `Bearer ${token}`;
+                  return apiClient(originalRequest);
+                })
+                .catch((err) => Promise.reject(err));
+            }
+
+            isRefreshing = true;
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers['X-Retry'] = 'true';
+
+            try {
+              const newToken = await refreshAccessToken();
+              processQueue(null, newToken);
+              
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              return apiClient(originalRequest);
+            } catch (refreshError) {
+              processQueue(refreshError, null);
+              
+              // Clear auth data and redirect to login
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('token');
+                localStorage.removeItem('velithra_token');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('velithra_refresh_token');
+                localStorage.removeItem('user');
+                localStorage.removeItem('velithra_user');
+                localStorage.removeItem('roles');
+                
+                if (!window.location.pathname.includes('/login')) {
+                  window.location.href = '/login';
+                }
+              }
+              
+              return Promise.reject(refreshError);
+            } finally {
+              isRefreshing = false;
+            }
           }
           break;
 
@@ -90,7 +224,7 @@ apiClient.interceptors.response.use(
           break;
 
         case 422: // Validation Error
-          console.error('Validation failed:', data?.errors);
+          console.error('Validation failed:', data);
           break;
 
         case 500: // Internal Server Error

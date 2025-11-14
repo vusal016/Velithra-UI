@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, UserPlus, Loader2 } from "lucide-react"
-import { appUserService, roleService } from "@/lib/services/coreServices"
+import { userManagementService, roleManagementService } from "@/lib/services/coreServices"
 import type { RoleDto } from "@/lib/types/core.types"
 import { toast } from "sonner"
 
@@ -22,7 +22,6 @@ export default function CreateUserPage() {
     userName: "",
     email: "",
     password: "",
-    fullName: "",
     roleId: "",
   })
 
@@ -33,7 +32,7 @@ export default function CreateUserPage() {
   const loadRoles = async () => {
     try {
       setIsLoadingRoles(true)
-      const data = await roleService.getAll()
+      const data = await roleManagementService.getAll()
       setRoles(data)
     } catch (error: any) {
       toast.error("Failed to load roles", {
@@ -47,7 +46,7 @@ export default function CreateUserPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.userName || !formData.email || !formData.password || !formData.fullName || !formData.roleId) {
+    if (!formData.userName || !formData.email || !formData.password || !formData.roleId) {
       toast.error("Validation Error", {
         description: "Please fill in all required fields",
       })
@@ -56,13 +55,16 @@ export default function CreateUserPage() {
 
     try {
       setIsSubmitting(true)
-      await appUserService.create(formData)
+      await userManagementService.create({
+        ...formData,
+        fullName: formData.userName, // Use userName as fullName for now
+      })
       
       toast.success("User created successfully!", {
         description: `${formData.userName} has been added to the system`,
       })
 
-      router.push("/admin/users")
+      router.push("/dashboard/users")
     } catch (error: any) {
       toast.error("Failed to create user", {
         description: error.message || "Please try again",
@@ -139,22 +141,6 @@ export default function CreateUserPage() {
                 value={formData.email}
                 onChange={(e) => handleChange("email", e.target.value)}
                 placeholder="user@example.com"
-                className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
-                required
-              />
-            </div>
-
-            {/* Full Name */}
-            <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-white">
-                Full Name <span className="text-red-400">*</span>
-              </Label>
-              <Input
-                id="fullName"
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => handleChange("fullName", e.target.value)}
-                placeholder="Enter full name"
                 className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
                 required
               />

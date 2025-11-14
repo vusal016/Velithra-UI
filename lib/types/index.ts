@@ -3,8 +3,5 @@
  * Central export point for all types
  */
 
-// Core Types
-export * from './core.types';
-
-// Module Types
-export * from './module.types';
+// Only export from api.types (which includes everything)
+export * from './api.types';

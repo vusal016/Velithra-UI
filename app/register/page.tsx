@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { VelithraLogo } from "@/components/logo/velithra-logo"
 import { useAuth } from "@/hooks/use-auth"
+import { authService } from "@/lib/services/authService"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -18,8 +19,7 @@ export default function RegisterPage() {
     userName: "", 
     email: "", 
     password: "", 
-    confirmPassword: "",
-    fullName: ""
+    confirmPassword: ""
   })
   const [error, setError] = useState("")
 
@@ -32,7 +32,7 @@ export default function RegisterPage() {
       return
     }
 
-    if (!formData.userName || !formData.email || !formData.password || !formData.fullName) {
+    if (!formData.userName || !formData.email || !formData.password) {
       setError("All fields are required")
       return
     }
@@ -42,9 +42,12 @@ export default function RegisterPage() {
         userName: formData.userName,
         email: formData.email,
         password: formData.password,
-        fullName: formData.fullName,
+        confirmPassword: formData.confirmPassword,
       })
-      router.push("/dashboard")
+      
+      // Role-based redirect (backend assigns "User" role by default)
+      const redirectPath = authService.getRoleRedirectPath()
+      router.push(redirectPath)
     } catch (err: any) {
       setError(err.response?.data?.message || "Registration failed. Please try again.")
     }
@@ -82,18 +85,6 @@ export default function RegisterPage() {
                 value={formData.userName}
                 onChange={(e) => setFormData({ ...formData, userName: e.target.value })}
                 placeholder="username"
-                className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-white">Full Name</label>
-              <Input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="John Doe"
                 className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
                 required
               />

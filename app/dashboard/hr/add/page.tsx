@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { hrService } from "@/lib/services/hrService"
+import { employeeService, departmentService, positionService } from "@/lib/services/hrService"
 import { DepartmentDto, PositionDto, EmployeeCreateDto } from "@/lib/types/module.types"
 import { toast } from "sonner"
 
@@ -38,8 +38,8 @@ export default function AddEmployeePage() {
       try {
         setIsLoadingData(true)
         const [depts, pos] = await Promise.all([
-          hrService.getAllDepartments(),
-          hrService.getAllPositions(),
+          departmentService.getAll(),
+          positionService.getAll(),
         ])
         setDepartments(depts)
         setPositions(pos)
@@ -134,7 +134,7 @@ export default function AddEmployeePage() {
         hireDate: new Date(formData.hireDate).toISOString(),
       }
 
-      await hrService.createEmployee(employeeData)
+      await employeeService.create(employeeData)
 
       toast.success("Employee added successfully", {
         description: `${formData.firstName} ${formData.lastName} has been added to the system`,

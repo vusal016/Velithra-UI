@@ -20,15 +20,16 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Check if user has HR role
-    if (!authService.hasRole("HR")) {
-      router.push("/dashboard")
-      return
+    // Check if user has HR or Manager role
+    if (!authService.hasRole("HR") && !authService.hasRole("Manager")) {
+      const redirectPath = authService.getRoleRedirectPath();
+      router.push(redirectPath);
+      return;
     }
 
     setUser({
       email: currentUser.email,
-      role: "HR",
+      role: authService.hasRole("HR") ? "HR" : "Manager",
     })
     setIsLoading(false)
   }, [router])

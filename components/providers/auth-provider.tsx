@@ -30,36 +30,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize auth state
   useEffect(() => {
-    const initAuth = () => {
-      const currentUser = authService.getUser();
-      const isAuth = authService.isAuthenticated();
-
-      setUser(currentUser);
-      setIsAuthenticated(isAuth);
-      setIsLoading(false);
-    };
-
-    initAuth();
+    // On mount, try to get user from localStorage (if needed) or set as unauthenticated
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const parsed = JSON.parse(userStr);
+        setUser(parsed);
+        setIsAuthenticated(!!localStorage.getItem('token'));
+      } catch {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } else {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+    setIsLoading(false);
   }, []);
 
   const login = useCallback(async (credentials: LoginRequest) => {
     try {
       setIsLoading(true);
       const response = await authService.login(credentials);
-
-      setUser({
+      
+      // Create proper User object with all required fields
+      const userObj: User = {
+        id: response.userName, // Use userName as ID since backend doesn't return userId
         userName: response.userName,
         email: response.email,
-        roles: response.roles,
-      });
+        fullName: response.userName, // Use userName as fallback
+        roles: response.roles || [],
+      };
+      
+      setUser(userObj);
       setIsAuthenticated(true);
-
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(userObj));
+      
       toast.success('Login successful!', {
-        description: `Welcome back, ${response.userName}!`,
+        description: `Welcome back, ${response.userName || response.email || 'User'}!`,
       });
     } catch (error: any) {
       toast.error('Login failed', {
-        description: error.response?.data?.message || 'Invalid credentials',
+        description: error.message || 'Invalid credentials',
       });
       throw error;
     } finally {
@@ -71,20 +85,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const response = await authService.register(userData);
-
-      setUser({
+      
+      // Create proper User object with all required fields
+      const userObj: User = {
+        id: response.userName, // Use userName as ID since backend doesn't return userId
         userName: response.userName,
         email: response.email,
-        roles: response.roles,
-      });
+        fullName: userData.fullName || response.userName,
+        roles: response.roles || [],
+      };
+      
+      setUser(userObj);
       setIsAuthenticated(true);
-
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(userObj));
+      
       toast.success('Registration successful!', {
-        description: `Welcome, ${response.userName}!`,
+        description: `Welcome, ${response.userName || response.email || 'User'}!`,
       });
     } catch (error: any) {
       toast.error('Registration failed', {
-        description: error.response?.data?.message || 'Please try again',
+        description: error.message || 'Please try again',
       });
       throw error;
     } finally {
@@ -104,14 +126,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasRole = useCallback(
     (role: string): boolean => {
-      return authService.hasRole(role);
+      return user?.roles?.includes(role) || false;
     },
     [user]
   );
 
   const hasAnyRole = useCallback(
     (roles: string[]): boolean => {
-      return authService.hasAnyRole(roles);
+      if (!user?.roles) return false;
+      return roles.some((role) => user.roles.includes(role));
     },
     [user]
   );

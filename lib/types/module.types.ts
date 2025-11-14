@@ -11,16 +11,12 @@ export interface ChatRoomDto {
   id: string;
   name: string;
   isPrivate: boolean;
-  createdBy: string;
-  createdAt: Date;
-  participants?: ChatParticipantDto[];
-  messages?: ChatMessageDto[];
+  createdAt: string;
 }
 
 export interface ChatRoomCreateDto {
   name: string;
   isPrivate: boolean;
-  createdBy: string;
 }
 
 export interface ChatRoomUpdateDto {
@@ -31,15 +27,14 @@ export interface ChatRoomUpdateDto {
 
 export interface ChatMessageDto {
   id: string;
-  chatRoomId: string;
+  roomId: string;
   senderId: string;
+  senderName: string;
   content: string;
-  sentAt: Date;
+  sentAt: string;
 }
 
 export interface ChatMessageCreateDto {
-  chatRoomId: string;
-  senderId: string;
   content: string;
 }
 
@@ -137,13 +132,11 @@ export interface EmployeeDto {
   id: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
   email: string;
-  phoneNumber: string;
-  address: string;
   departmentName: string;
   positionTitle: string;
   status: 'Active' | 'OnLeave' | 'Terminated';
+  hireDate: string;
 }
 
 export interface EmployeeCreateDto {
@@ -156,18 +149,17 @@ export interface EmployeeCreateDto {
   positionId: string;
   departmentId: string;
   hireDate: string;
+  userId?: string;
 }
 
 export interface EmployeeUpdateDto {
   id: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phoneNumber?: string;
-  departmentId?: string;
-  positionId?: string;
-  hireDate?: Date;
-  salary?: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  positionTitle: string;
+  departmentName: string;
+  status: 'Active' | 'OnLeave' | 'Terminated';
 }
 
 export interface DepartmentDto {
@@ -213,66 +205,53 @@ export interface CourseDto {
   id: string;
   title: string;
   description: string;
-  instructorId: string;
-  startDate: Date;
-  endDate: Date;
-  capacity: number;
-  enrolledCount: number;
+  createdAt: string;
 }
 
 export interface CourseCreateDto {
   title: string;
   description: string;
-  instructorId: string;
-  startDate: Date;
-  endDate: Date;
-  capacity: number;
 }
 
 export interface CourseUpdateDto {
   id: string;
   title?: string;
   description?: string;
-  instructorId?: string;
-  startDate?: Date;
-  endDate?: Date;
-  capacity?: number;
 }
 
 export interface LessonDto {
   id: string;
-  courseId: string;
   title: string;
   content: string;
-  order: number;
-  createdAt: Date;
+  courseId: string;
+  createdAt: string;
 }
 
 export interface LessonCreateDto {
   courseId: string;
   title: string;
   content: string;
-  order: number;
 }
 
 export interface LessonUpdateDto {
   id: string;
   title?: string;
   content?: string;
-  order?: number;
 }
 
 export interface EnrollmentDto {
   id: string;
   courseId: string;
-  studentId: string;
-  enrolledAt: Date;
-  status: string; // "Active" | "Completed" | "Dropped"
+  employeeId: string;
+  enrolledAt: string;
+  completedAt?: string;
+  status: 'InProgress' | 'Completed' | 'Dropped';
+  progress: number;
 }
 
 export interface EnrollmentCreateDto {
+  employeeId: string;
   courseId: string;
-  studentId: string;
 }
 
 export interface EnrollmentUpdateDto {
@@ -284,35 +263,42 @@ export interface EnrollmentUpdateDto {
 // TASK MANAGER MODULE
 // ============================================
 
+export type TaskState = 'Pending' | 'InProgress' | 'Completed' | 'Cancelled';
+
 export interface TaskDto {
   id: string;
   title: string;
   description: string;
-  assignedTo: string;
-  status: 'Pending' | 'InProgress' | 'Completed';
-  priority: 'Low' | 'Medium' | 'High';
-  dueDate: Date;
-  createdAt: Date;
-  updatedAt?: Date;
+  assignedUserId: string;
+  state: TaskState;
+  dueDate: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface TaskCreateDto {
   title: string;
   description: string;
-  assignedTo: string;
-  status: 'Pending' | 'InProgress' | 'Completed';
-  priority: 'Low' | 'Medium' | 'High';
-  dueDate: Date;
+  dueDate: string;
+  assignedToUserId: string;
+}
+
+export interface TaskAssignDto {
+  taskId: string;
+  userId: string;
 }
 
 export interface TaskUpdateDto {
   id: string;
   title?: string;
   description?: string;
-  assignedTo?: string;
-  status?: 'Pending' | 'InProgress' | 'Completed';
-  priority?: 'Low' | 'Medium' | 'High';
-  dueDate?: Date;
+  state?: TaskState;
+  dueDate?: string;
+}
+
+export interface TaskFilterOptions {
+  state?: TaskState | 'all';
+  assignedUserId?: string;
 }
 
 // ============================================

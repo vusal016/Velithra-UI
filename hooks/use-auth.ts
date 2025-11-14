@@ -48,12 +48,20 @@ export const useAuth = (): UseAuthReturn => {
       setIsLoading(true);
       const response = await authService.login(credentials);
 
-      setUser({
+      // Create complete User object
+      const userObj: User = {
+        id: response.userName, // Use userName as ID since backend doesn't return userId
         userName: response.userName,
         email: response.email,
+        fullName: response.userName, // Use userName as fallback
         roles: response.roles || [],
-      });
+      };
+      
+      setUser(userObj);
       setIsAuthenticated(true);
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(userObj));
 
       toast.success('Login successful!', {
         description: `Welcome back, ${response.userName}!`,
@@ -79,12 +87,20 @@ export const useAuth = (): UseAuthReturn => {
       setIsLoading(true);
       const response = await authService.register(userData);
 
-      setUser({
+      // Create complete User object
+      const userObj: User = {
+        id: response.userName, // Use userName as ID since backend doesn't return userId
         userName: response.userName,
         email: response.email,
+        fullName: userData.fullName || response.userName,
         roles: response.roles || [],
-      });
+      };
+      
+      setUser(userObj);
       setIsAuthenticated(true);
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(userObj));
 
       toast.success('Registration successful!', {
         description: `Welcome, ${response.userName}!`,
